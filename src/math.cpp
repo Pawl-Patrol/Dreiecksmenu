@@ -1,22 +1,32 @@
 #include "math.hpp"
 
-double rad(double deg)
+float max(float a, float b)
+{
+    return a > b ? a : b;
+}
+
+int abs(int a)
+{
+    return a > -a ? a : -a;
+}
+
+float rad(float deg)
 {
     return deg * PI / 180;
 }
 
-double deg(double rad)
+float deg(float rad)
 {
     return rad * 180 / PI;
 }
 
-double sqrt(double x)
+float sqrt(float x)
 {
     if (x == 0)
     {
         return 0;
     }
-    double a, b, guess = x;
+    float a, b, guess = x;
     for (int i = 0; i < SQRT_ITERATIONS; i++)
     {
         a = guess;
@@ -30,78 +40,80 @@ double sqrt(double x)
     return guess;
 }
 
-double factorial(int x)
+int factorial(int x)
 {
-    double val = x;
-    while (--x)
+    if (x == 0)
     {
-        val *= x;
+        return 1;
     }
-    return val;
+    else
+    {
+        return x * factorial(x - 1);
+    }
 }
 
-double sin(double x)
+float sin(float x)
 {
-    if (x == 0.0)
+    if (x == 0.0f)
     {
         return 0;
     }
-    double x_sq = x;
+    float x_sq = x;
     char sign = 1;
-    double result = x;
-    double a;
+    float result = x;
+    float a;
     x *= x;
     for (int n = 1; n < TRIG_ITERATIONS; n++)
     {
         x_sq *= x;
         sign *= -1;
         a = sign * x_sq;
-        a /= factorial(2 * n + 1);
+        a /= (float)factorial(2 * n + 1);
         result += a;
     }
     return result;
 }
 
-double cos(double x)
+float cos(float x)
 {
     if (x == 0.0)
     {
         return 1;
     }
     x *= x;
-    double x_sq = 1;
+    float x_sq = 1;
     char sign = 1;
-    double result = 1;
-    double a;
+    float result = 1;
+    float a;
     for (int n = 1; n < TRIG_ITERATIONS; n++)
     {
         x_sq *= x;
         sign *= -1;
         a = sign * x_sq;
-        a /= factorial(2 * n);
+        a /= (float)factorial(2 * n);
         result += a;
     }
     return result;
 }
 
-double arcsin(double x)
+float arcsin(float x)
 {
     if (x == 0.0)
     {
         return 0;
     }
-    double result = x;
-    double mfour = 1;
-    double fact1 = 1;
-    double mult = x;
-    double a, b;
+    float result = x;
+    float mfour = 1;
+    float fact1 = 1;
+    float mult = x;
+    float a, b;
     x *= x;
     for (int n = 1; n < TRIG_ITERATIONS; n++)
     {
         mfour *= 4;
         fact1 *= n;
         mult *= x;
-        a = factorial(2 * n);
+        a = (float)factorial(2 * n);
         a *= mult;
         b = mfour;
         b *= fact1;
@@ -113,7 +125,7 @@ double arcsin(double x)
     return result;
 }
 
-double arccos(double x)
+float arccos(float x)
 {
     if (x == 1.0)
     {
@@ -122,9 +134,9 @@ double arccos(double x)
     return PI / 2 - arcsin(x);
 }
 
-double cos_side(double side1, double side2, double opposite_angle)
+float cos_side(float side1, float side2, float opposite_angle)
 {
-    double x = side1;
+    float x = side1;
     x *= side2;
     x *= -2 * cos(rad(opposite_angle));
     side1 *= side1;
@@ -134,9 +146,9 @@ double cos_side(double side1, double side2, double opposite_angle)
     return sqrt(x);
 }
 
-double cos_angle(double side1, double side2, double opposite_side)
+float cos_angle(float side1, float side2, float opposite_side)
 {
-    double x = 2;
+    float x = 2;
     x *= side1;
     x *= side2;
     side1 *= side1;
@@ -148,17 +160,17 @@ double cos_angle(double side1, double side2, double opposite_side)
     return deg(arccos(side1));
 }
 
-double sin_side(double side, double opposite_angle, double angle)
+float sin_side(float side, float opposite_angle, float angle)
 {
     return sin(rad(angle))*side/sin(rad(opposite_angle));
 }
 
-double sin_angle(double opposite_angle, double side, double opposite_side)
+float sin_angle(float opposite_angle, float side, float opposite_side)
 {
     return deg(arcsin(opposite_side*sin(rad(opposite_angle))/side));
 }
 
-void three_sides(double a, double b, double c, double *alpha, double *beta, double *gamma)
+void three_sides(float a, float b, float c, float *alpha, float *beta, float *gamma)
 {
     *alpha = cos_angle(b, c, a);
     *beta = cos_angle(a, c, b);

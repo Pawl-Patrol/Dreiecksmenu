@@ -1,59 +1,62 @@
 #include "draw.hpp"
+#include "math.hpp"
 
 unsigned char FKEY_WIDTH = LCD_WIDTH_PX / 6;
 unsigned char FKEY_HEIGHT = LCD_HEIGHT_PX / 9;
 
-void plot(unsigned x, unsigned y, unsigned short color)
+
+void getRGB(color_t color, int *r, int *g, int *b)
 {
-    unsigned short *s = (unsigned short *)0xA8000000;
-    s += (y * 384) + x;
-    *s = color;
+    *r = color >> 11;
+    *g = (color & 0x07E0) >> 5;
+    *b = color & 0x001F;
 }
 
-void drawLine(int x1, int y1, int x2, int y2, unsigned short color)
+
+color_t getColorAlpha(int r, int g, int b, float alpha)
 {
-    signed char ix;
-    signed char iy;
+    r = (1.0f - alpha) * r + alpha * 31;
+    g = (1.0f - alpha) * g + alpha * 63;
+    b = (1.0f - alpha) * b + alpha * 31;
+    return r << 11 | g << 5 | b;
+}
 
-    // if x1 == x2 or y1 == y2, then it does not matter what we set here
-    int delta_x = (x2 > x1 ? (ix = 1, x2 - x1) : (ix = -1, x1 - x2)) << 1;
-    int delta_y = (y2 > y1 ? (iy = 1, y2 - y1) : (iy = -1, y1 - y2)) << 1;
+void plot(int x, int y, color_t color)
+{
+    color_t *VRAM = (color_t *)GetVRAMAddress();
+    VRAM[y * LCD_WIDTH_PX + x] = color;
+}
 
-    plot(x1, y1, color);
-    if (delta_x >= delta_y)
+void plotLineAA(int x0, int y0, int x1, int y1, color_t color)
+{
+    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int x2, e2, err = dx - dy;
+    int ed = dx + dy == 0 ? 1 : sqrt((float)dx * dx + (float)dy * dy);
+    int r, g, b;
+    getRGB(color, &r, &g, &b);
+    while (true)
     {
-        int error = delta_y - (delta_x >> 1); // error may go below zero
-        while (x1 != x2)
+        plot(x0, y0, getColorAlpha(r, g, b, (float)abs(err - dx + dy) / ed));
+        e2 = err;
+        x2 = x0;
+        if (2 * e2 >= -dx)
         {
-            if (error >= 0)
-            {
-                if (error || (ix > 0))
-                {
-                    y1 += iy;
-                    error -= delta_x;
-                } // else do nothing
-            }     // else do nothing
-            x1 += ix;
-            error += delta_y;
-            plot(x1, y1, color);
+            if (x0 == x1)
+                break;
+            if (e2 + dy < ed)
+                plot(x0, y0 + sy, getColorAlpha(r, g, b, (float)(e2 + dy) / ed));
+            err -= dy;
+            x0 += sx;
         }
-    }
-    else
-    {
-        int error = delta_x - (delta_y >> 1); // error may go below zero
-        while (y1 != y2)
+        if (2 * e2 <= dy)
         {
-            if (error >= 0)
-            {
-                if (error || (iy > 0))
-                {
-                    x1 += ix;
-                    error -= delta_y;
-                } // else do nothing
-            }     // else do nothing
-            y1 += iy;
-            error += delta_x;
-            plot(x1, y1, color);
+            if (y0 == y1)
+                break;
+            if (dx - e2 < ed)
+                plot(x2 + sx, y0, getColorAlpha(r, g, b, (float)(dx - e2) / ed));
+            err += dx;
+            y0 += sy;
         }
     }
 }

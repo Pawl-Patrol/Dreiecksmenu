@@ -2,59 +2,67 @@
 
 #define EXPONENT_SYMBOL 15
 
-double atof(const char *buffer)
+float atof(char *str, int *precision)
 {
-    double ret = 0, fact = 1;
-    if (*buffer == '-')
+    float result = 0, fact = 1;
+    if (*str == '-')
     {
-        buffer++;
+        str++;
         fact = -1;
     }
-    for (bool point = false; *buffer; buffer++)
+    int local_precision = 0;
+    for (bool point = false; *str; str++)
     {
-        if (*buffer == '.')
+        if (*str == '.')
         {
             point = true;
             continue;
         }
-        int d = *buffer - '0';
-        if (d >= 0 && d <= 9)
+        int digit = *str - '0';
+        if (digit >= 0 && digit <= 9)
         {
             if (point)
             {
                 fact /= 10.0f;
+                local_precision++;
+                if (local_precision > *precision)
+                {
+                    *precision = local_precision;
+                }
             }
-            ret = ret * 10.0f + (double)d;
+            result = result * 10.0f + (float)digit;
         }
     }
-    return ret * fact;
+    return result * fact;
 }
 
-char *ftoa(float num, int precision)
+float round(float value, int digits)
 {
-    unsigned long long fraction = 1000000000000LL;
-    unsigned long long f = 0;
-    unsigned long long d = 0;
+    float mult = 1;
+    while (digits--) mult *= 10;
+    return (float)(int)(value * mult + .5) / mult;
+}
+
+char *ftoa(float num, int precision, int maxlen)
+{
+    num = round(num, precision);
+    unsigned long long f = 1000000000000LL;
+    unsigned long long fraction = 0;
+    unsigned long long digits = 0;
     unsigned int data = *((int *)(&num));
     signed char e = data >> 23;
-
     e &= 0xff;
     e -= 127;
-
     bool sign = data & 0b10000000000000000000000000000000;
-
     unsigned int sig = data & 0b00000000011111111111111111111111;
     sig |= 0b00000000100000000000000000000000;
     sig <<= 8;
-
     for (int i = 23; i; i--)
     {
         bool a = sig & 0b10000000000000000000000000000000;
-
         if (a)
         {
-            unsigned long long ft = fraction, dt = 0;
-
+            unsigned long long ft = f, dt = 0;
             for (int ei = e; ei != 0; ei -= (ei >= 0 ? 1 : -1))
             {
                 if (ei > 0)
@@ -74,53 +82,52 @@ char *ftoa(float num, int precision)
                     dt++;
                 }
             }
-            d += dt;
-            f += ft;
+            digits += dt;
+            fraction += ft;
 
-            while (f >= 1000000000000LL)
+            while (fraction >= 1000000000000LL)
             {
-                f -= 1000000000000LL;
-                d++;
+                fraction -= 1000000000000LL;
+                digits++;
             }
         }
 
-        fraction >>= 1;
+        f >>= 1;
         sig <<= 1;
     }
-    char* buffer = (char*)sys_malloc(sizeof(char) * (8 + precision)); // D.FFFFFeEEE | DDDDD.FFFFF -> sign + 6 symbols + precision + '\0'
-    char* ptr = buffer; 
+    char *rbuffer = (char *)sys_malloc(sizeof(char) * 8 + precision);
+    char *rptr = rbuffer;
     if (sign)
     {
-        *ptr++ = '-';
+        *rptr++ = '-';
     }
     char dbuffer[21];
-    char* dptr = dbuffer;
-
-    char* b = (char*)sys_malloc(sizeof(char) * 21);
-    *b = '\0';
-    while (d)
+    char *dptr = dbuffer;
+    char *reversedbuffer = (char *)sys_malloc(sizeof(char) * 21);
+    *reversedbuffer = '\0';
+    while (digits)
     {
-        *++b = '0' + d % 10;
-        d /= 10;
+        *++reversedbuffer = '0' + digits % 10;
+        digits /= 10;
     }
     int len = 0;
-    while (*b)
+    while (*reversedbuffer)
     {
-        *dptr++ = *b--;
+        *dptr++ = *reversedbuffer--;
         len++;
     }
     *dptr = '\0';
-    sys_free(b);
-    if (len > 5)
+    sys_free(reversedbuffer);
+    if (len >= maxlen)
     {
-        *ptr++ = dbuffer[0];
-        *ptr++ = '.';
+        *rptr++ = dbuffer[0];
+        *rptr++ = '.';
         for (int i = 0; i < precision && i < len - 1; i++)
         {
-            *ptr++ = dbuffer[i + 1];
+            *rptr++ = dbuffer[i + 1];
         }
-        *ptr++ = 15;
-        itoa(len - 1, (unsigned char*)ptr);
+        *rptr++ = EXPONENT_SYMBOL;
+        itoa(len - 1, (unsigned char *)rptr);
     }
     else
     {
@@ -128,22 +135,22 @@ char *ftoa(float num, int precision)
         {
             for (int i = 0; i < len; i++)
             {
-                *ptr++ = dbuffer[i];
+                *rptr++ = dbuffer[i];
             }
         }
         else
         {
-            *ptr++ = '0';
+            *rptr++ = '0';
         }
-        *ptr = '.';
+        *rptr = '.';
         char fbuffer[12];
-        char* fptr = fbuffer + 11;
+        char *fptr = fbuffer + 11;
         for (int i = 11; i >= 0; i--)
         {
-            *fptr-- = '0' + f % 10;
-            f /= 10;
+            *fptr-- = '0' + fraction % 10;
+            fraction /= 10;
         }
-        ptr += precision;
+        rptr += precision;
         bool can_skip = true;
         for (int i = precision - 1; i >= 0; i--)
         {
@@ -151,18 +158,18 @@ char *ftoa(float num, int precision)
             {
                 if (fbuffer[i] == '0')
                 {
-                    ptr--;
+                    rptr--;
                     continue;
                 }
-                *(ptr + 1) = '\0';
+                *(rptr + 1) = '\0';
                 can_skip = false;
             }
-            *ptr-- = fbuffer[i];
+            *rptr-- = fbuffer[i];
         }
         if (can_skip)
         {
-            *ptr = '\0';
+            *rptr = '\0';
         }
     }
-    return buffer;
+    return rbuffer;
 }

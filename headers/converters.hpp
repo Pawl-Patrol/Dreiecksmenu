@@ -1,6 +1,6 @@
 #include <fxcg/misc.h>
 #include <fxcg/heap.h>
-#include <string.h>
 
-double atof(const char *buffer);
-char *ftoa(float num, int precision);
+float atof(char *str, int *precision);
+float round(float value, int digits);
+char *ftoa(float num, int precision, int maxlen);

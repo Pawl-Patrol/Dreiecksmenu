@@ -1,6 +1,6 @@
 #include "interaction.hpp"
 
-int getChoice(const char* title, const char** choices, int length)
+int getChoice(const char *title, const char **choices, int length)
 {
     PrintXY(1, 1, title, TEXT_MODE_NORMAL, TEXT_COLOR_BLUE);
     int index = 0;
@@ -40,4 +40,38 @@ int getChoice(const char* title, const char** choices, int length)
     }
     Bdisp_Fill_VRAM(COLOR_WHITE, 1);
     return index;
+}
+
+bool getValue(float *value, int x, int y, const char *msg, int maxlen, int *precision)
+{
+    PrintXY(x, y, msg, TEXT_MODE_NORMAL, TEXT_COLOR_BLUE);
+    y++;
+    int start = 0, cursor = 0;
+    char *buffer = (char *)sys_malloc(sizeof(char) * maxlen);
+    *buffer = '\0';
+    DisplayMBString((unsigned char *)buffer, start, cursor, x, y);
+    int key;
+    while (true)
+    {
+        GetKey(&key);
+        if (key == KEY_CTRL_EXE)
+        {
+            break;
+        }
+        else if (key == KEY_CTRL_EXIT)
+        {
+            return true;
+        }
+        else if ((key >= KEY_CHAR_0 && key <= KEY_CHAR_9) || key == KEY_CHAR_DP)
+        {
+            cursor = EditMBStringChar((unsigned char *)buffer, maxlen, cursor, key);
+            DisplayMBString((unsigned char *)buffer, start, cursor, x, y);
+        }
+        else
+        {
+            EditMBStringCtrl((unsigned char *)buffer, maxlen, &start, &cursor, &key, x, y);
+        }
+    }
+    *value = atof(buffer, precision);
+    return false;
 }

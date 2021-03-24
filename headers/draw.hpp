@@ -1,4 +1,7 @@
 #include <fxcg/display.h>
 
-void drawLine(int x1, int y1, int x2, int y2, color_t color);
+void getRGB(color_t color, int *r, int *g, int *b);
+color_t getColorAlpha(int r, int g, int b, float alpha);
+void plot(int x, int y, color_t color);
+void plotLineAA(int x0, int y0, int x1, int y1, color_t color);
 void drawFKey(int pos, const bool* bitmap);
